@@ -26,16 +26,33 @@ pipeline {
             }
         }
 
-        stage('Push Image to Registry') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+    stage('Push Image to Azure Container Registry') {
+        steps {
+            withCredentials([azureServicePrincipal(credentialsId: 'AZURE_CREDENTIALS')]) {
+                script {
                     sh '''
-                    echo "$PASS" | docker login -u "$USER" --password-stdin
-                    docker push ${DOCKER_REPO}:${GIT_COMMIT}
+                        # Login to Azure using Service Principal
+                        az login --service-principal \
+                            -u $AZURE_CLIENT_ID \
+                            -p $AZURE_CLIENT_SECRET \
+                            --tenant $AZURE_TENANT_ID
+    
+                        # Login to ACR
+                        az acr login --name hardkacr
+    
+                        # Tag and push Docker images
+                        IMAGE_TAG=${GIT_COMMIT}
+                        docker tag getting-started:$IMAGE_TAG hardkacr.azurecr.io/getting-started:$IMAGE_TAG
+                        docker tag getting-started:$IMAGE_TAG hardkacr.azurecr.io/getting-started:latest
+                        docker push hardkacr.azurecr.io/getting-started:$IMAGE_TAG
+                        docker push hardkacr.azurecr.io/getting-started:latest
                     '''
                 }
             }
         }
+    }
+
+
 
         stage('Prepare Kustomize') {
             steps {
