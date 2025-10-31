@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: getting-started
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: getting-started
+          image: yourdockerhubuser/getting-started:prod
+          env:
+            - name: ENV
+              value: "production"
+
