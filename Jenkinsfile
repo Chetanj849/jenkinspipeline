@@ -67,24 +67,23 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        echo "🔧 Installing Kustomize..."
+                        echo "🔧 Installing Kustomize locally..."
                         curl -s "https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest" \
                           | grep browser_download_url \
                           | grep linux_amd64.tar.gz \
                           | cut -d '"' -f 4 \
                           | wget -qi -
                         tar -xzf kustomize_v*_linux_amd64.tar.gz
-                        sudo mv kustomize /usr/local/bin/ || mv kustomize /usr/bin/
-                        chmod +x $(which kustomize || echo ./kustomize)
+                        chmod +x kustomize
         
                         echo "🔧 Updating image tag in Kustomize..."
                         cd deployment-config/k8s/overlays/dev
-                        kustomize edit set image getting-started=${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+                        ../../kustomize edit set image getting-started=${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
         }
-
+        
 
         // -------------------------------
         stage('Deploy to AKS') {
