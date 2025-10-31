@@ -78,11 +78,12 @@ pipeline {
         
                         echo "🔧 Updating image tag in Kustomize..."
                         cd deployment-config/k8s/overlays/dev
-                        ../../kustomize edit set image getting-started=${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+                        $WORKSPACE/kustomize edit set image getting-started=${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
         }
+
         
 
         // -------------------------------
