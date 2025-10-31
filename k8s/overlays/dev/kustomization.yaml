@@ -1,16 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Reference the base Kubernetes manifests
 resources:
   - ../../base
 
-# (Optional) Override the image name and tag
 images:
   - name: getting-started
     newName: hardkacr.azurecr.io/docker-getting-started
     newTag: latest
-
-# (Optional) Patches, config maps, etc.
-# patchesStrategicMerge:
-#   - patch.yaml
