@@ -15,8 +15,7 @@ spec:
         app: getting-started
     spec:
       containers:
-        - name: getting-started
-          image: yourdockerhubuser/getting-started:latest
-          ports:
-            - containerPort: 80
-
+      - name: getting-started
+        image: hardkacr.azurecr.io/docker-getting-started:latest
+        ports:
+        - containerPort: 80
