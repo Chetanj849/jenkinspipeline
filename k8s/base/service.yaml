@@ -1,12 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: getting-started-service
+  name: getting-started
 spec:
   type: LoadBalancer
   selector:
     app: getting-started
   ports:
-    - port: 80
-      targetPort: 80
-
+  - port: 80
+    targetPort: 80
