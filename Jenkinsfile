@@ -44,27 +44,30 @@ pipeline {
         // -------------------------------
         stage('Push Image to Azure Container Registry') {
             steps {
-                withCredentials([string(credentialsId: 'azure-sp', variable: 'AZURE_JSON')]) {
+                withCredentials([azureServicePrincipal(credentialsId: 'azure-sp')]) {
                     script {
-                        def creds = readJSON text: AZURE_JSON
-                        sh """
+                        sh '''
                             echo "🔐 Logging in to Azure..."
-                            az login --service-principal -u ${creds.clientId} -p ${creds.clientSecret} --tenant ${creds.tenantId}
-
-                            echo "⚓ Logging in to Azure Container Registry..."
-                            az acr login --name ${ACR_NAME}
-
-                            echo "🏷️ Tagging and pushing Docker image..."
-                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
-                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-
-                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
-                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-                        """
+                            az login --service-principal \
+                                -u $AZURE_CLIENT_ID \
+                                -p $AZURE_CLIENT_SECRET \
+                                --tenant $AZURE_TENANT_ID
+                            
+                            echo "📦 Logging in to ACR..."
+                            az acr login --name hardkacr
+        
+                            IMAGE_TAG=${GIT_COMMIT}
+                            echo "🚀 Pushing image to ACR..."
+                            docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:$IMAGE_TAG
+                            docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:latest
+                            docker push hardkacr.azurecr.io/docker-getting-started:$IMAGE_TAG
+                            docker push hardkacr.azurecr.io/docker-getting-started:latest
+                        '''
                     }
                 }
             }
         }
+
 
         // -------------------------------
         stage('Prepare Kustomize') {
