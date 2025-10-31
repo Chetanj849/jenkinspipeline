@@ -73,7 +73,7 @@ pipeline {
         stage('Prepare Kustomize') {
             steps {
                 dir('deployment-config') {
-                    git url: 'https://github.com/youruser/docker-getting-started-deploy.git', branch: 'main'
+                    git url: 'https://github.com/Chetanj849/getting-started.git', branch: 'master'
 
                     dir("${K8S_PATH}") {
                         sh """
