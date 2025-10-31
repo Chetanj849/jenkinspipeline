@@ -26,7 +26,7 @@ pipeline {
                     url: 'https://github.com/Chetanj849/getting-started.git',
                     branch: 'master'
                 )
-            }
+            } 
         }
 
         // -------------------------------
@@ -34,35 +34,30 @@ pipeline {
             steps {
                 script {
                     sh """
-                    echo "🛠️ Building Docker image..."
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        echo "🛠️ Building Docker image..."
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                     """
                 }
             }
         }
 
         // -------------------------------
-        stage('Push Image to Azure Container Registry') {
+          stage('Push Image to Azure Container Registry') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'azure-sp', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
                     script {
-                        sh '''
-                            az login --service-principal \
-                                -u $AZURE_CLIENT_ID \
-                                -p $AZURE_CLIENT_SECRET \
-                                --tenant e4e34038-ea1f-4882-b6e8-ccd776459ca0
-                
-                            az acr login --name hardkacr
-                
-                            IMAGE_TAG=${GIT_COMMIT}
-                            docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:$IMAGE_TAG
-                            docker push hardkacr.azurecr.io/docker-getting-started:$IMAGE_TAG
-                            docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:latest
-                            docker push hardkacr.azurecr.io/docker-getting-started:latest
-                        '''
+                        sh """
+                            az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant e4e34038-ea1f-4882-b6e8-ccd776459ca0
+                            az acr login --name ${ACR_NAME}
+        
+                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+        
+                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+                        """
                     }
                 }
-
             }
         }
 
