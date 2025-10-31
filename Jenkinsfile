@@ -10,7 +10,7 @@ pipeline {
         stage('Checkout Source') {
             steps {
                 // Clone the original Docker getting-started repo
-                git url: 'https://github.com/docker/getting-started.git', branch: 'main'
+                git url: 'https://github.com/docker/getting-started.git', branch: 'master'
             }
         }
 
