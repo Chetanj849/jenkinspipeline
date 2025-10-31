@@ -44,27 +44,25 @@ pipeline {
         // -------------------------------
         stage('Push Image to Azure Container Registry') {
             steps {
-                withCredentials([azureServicePrincipal(credentialsId: 'azure-sp')]) {
+                withCredentials([usernamePassword(credentialsId: 'azure-sp', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
                     script {
                         sh '''
-                            echo "🔐 Logging in to Azure..."
                             az login --service-principal \
                                 -u $AZURE_CLIENT_ID \
                                 -p $AZURE_CLIENT_SECRET \
-                                --tenant $AZURE_TENANT_ID
-                            
-                            echo "📦 Logging in to ACR..."
+                                --tenant e4e34038-ea1f-4882-b6e8-ccd776459ca0
+                
                             az acr login --name hardkacr
-        
+                
                             IMAGE_TAG=${GIT_COMMIT}
-                            echo "🚀 Pushing image to ACR..."
                             docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:$IMAGE_TAG
-                            docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:latest
                             docker push hardkacr.azurecr.io/docker-getting-started:$IMAGE_TAG
+                            docker tag docker-getting-started:$IMAGE_TAG hardkacr.azurecr.io/docker-getting-started:latest
                             docker push hardkacr.azurecr.io/docker-getting-started:latest
                         '''
                     }
                 }
+
             }
         }
 
