@@ -65,23 +65,26 @@ pipeline {
         // -------------------------------
         stage('Prepare Kustomize') {
             steps {
-                dir('deployment-config') {
-                    git url: 'https://github.com/Chetanj849/getting-started.git', branch: 'master'
-
-                    dir("${K8S_PATH}") {
-                        sh """
+                script {
+                    sh '''
+                        echo "🔧 Installing Kustomize..."
+                        curl -s "https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest" \
+                          | grep browser_download_url \
+                          | grep linux_amd64.tar.gz \
+                          | cut -d '"' -f 4 \
+                          | wget -qi -
+                        tar -xzf kustomize_v*_linux_amd64.tar.gz
+                        sudo mv kustomize /usr/local/bin/ || mv kustomize /usr/bin/
+                        chmod +x $(which kustomize || echo ./kustomize)
+        
                         echo "🔧 Updating image tag in Kustomize..."
-                        kustomize edit set image ${DOCKER_REPO}=${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
-
-                        git config user.name "jenkins"
-                        git config user.email "jenkins@ci.local"
-                        git commit -am "Update image to ${IMAGE_TAG}"
-                        git push origin main
-                        """
-                    }
+                        cd deployment-config/k8s/overlays/dev
+                        kustomize edit set image getting-started=${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+                    '''
                 }
             }
         }
+
 
         // -------------------------------
         stage('Deploy to AKS') {
