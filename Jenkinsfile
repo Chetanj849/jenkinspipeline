@@ -96,14 +96,19 @@ pipeline {
         // -------------------------------
         stage('Deploy to AKS') {
             steps {
-                withKubeConfig([credentialsId: 'aks-kubeconfig']) {
-                    dir('infra') {
-                        sh """
-                            echo "🚀 Deploying to AKS..."
-                            kubectl apply -k ${K8S_PATH}
-                        """
-                    }
+                // If you uploaded kubeconfig as a secret file
+                withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
+                    kubectl apply -k k8s/overlays/dev
+                    '''
                 }
+                
+                // Or if kubeconfig is on disk
+                // sh '''
+                // export KUBECONFIG=/path/to/aks-config.yaml
+                // kubectl apply -k k8s/overlays/dev
+                // '''
             }
         }
     }
