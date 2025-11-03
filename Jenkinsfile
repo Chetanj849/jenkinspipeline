@@ -94,6 +94,20 @@ pipeline {
         }
 
         // -------------------------------
+        
+        
+        stage('Install Tools') {
+            steps {
+                sh '''
+                echo "🔧 Installing kubectl..."
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                chmod +x kubectl
+                mv kubectl $HOME/kubectl
+                export PATH=$HOME:$PATH
+                '''
+            }
+        }
+        
         stage('Deploy to AKS') {
             steps {
                 // If you uploaded kubeconfig as a secret file
