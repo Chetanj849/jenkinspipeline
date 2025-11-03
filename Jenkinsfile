@@ -21,13 +21,16 @@ pipeline {
     stages {
         // -------------------------------
 
-        stage('Checkout Source') {
+        stage('Checkout Sources') {
             steps {
+                // Clone app repo (contains Dockerfile)
                 dir('app-src') {
-                    git(url: 'https://github.com/Chetanj849/getting-started.git', branch: 'master')
+                    git url: 'https://github.com/Chetanj849/getting-started.git', branch: 'master'
                 }
+
+                // Clone deployment repo (contains K8s manifests)
                 dir('deployment-config') {
-                    git(url: 'https://github.com/Chetanj849/jenkinspipeline.git', branch: 'master')
+                    git url: 'https://github.com/Chetanj849/jenkinspipeline.git', branch: 'master'
                 }
             }
         }
