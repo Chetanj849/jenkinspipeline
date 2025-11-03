@@ -20,13 +20,16 @@ pipeline {
 
     stages {
         // -------------------------------
+
         stage('Checkout Source') {
             steps {
-                git(
-                    url: 'https://github.com/Chetanj849/getting-started.git',
-                    branch: 'master'
-                )
-            } 
+                dir('app-src') {
+                    git(url: 'https://github.com/Chetanj849/getting-started.git', branch: 'master')
+                }
+                dir('deployment-config') {
+                    git(url: 'https://github.com/Chetanj849/jenkinspipeline.git', branch: 'master')
+                }
+            }
         }
 
         // -------------------------------
