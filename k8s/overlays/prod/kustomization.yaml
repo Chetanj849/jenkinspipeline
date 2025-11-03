@@ -3,6 +3,9 @@ kind: Kustomization
 
 resources:
   - ../../base
+  
+patchesStrategicMerge:
+  - patch.yaml
 
 images:
   - name: getting-started
