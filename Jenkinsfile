@@ -66,6 +66,7 @@ pipeline {
                 script {
                     echo "🔧 Installing Kustomize locally..."
                     sh '''
+                        cd $WORKSPACE
                         curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest \
                         | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4 | wget -qi -
                         tar -xzf kustomize_v*_linux_amd64.tar.gz
@@ -78,9 +79,6 @@ pipeline {
                 }
             }
         }
-
-
-        
 
         // -------------------------------
         stage('Deploy to AKS') {
