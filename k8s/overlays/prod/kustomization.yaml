@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - ../../base
 
+patchesStrategicMerge:
+  - patch.yaml
+
 images:
   - name: getting-started
     newName: hardkacr.azurecr.io/docker-getting-started
