@@ -114,7 +114,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
                     sh '''
                     export KUBECONFIG=$KUBECONFIG_FILE
-                    kubectl apply -k k8s/overlays/dev
+                    /var/lib/jenkins/kubectl apply -k k8s/overlays/dev
                     '''
                 }
                 
