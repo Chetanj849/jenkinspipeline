@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: getting-started
 spec:
-  replicas: 3
+  replicas: 5
   template:
     spec:
       containers:
@@ -12,4 +12,3 @@ spec:
           env:
             - name: ENV
               value: "production"
-
