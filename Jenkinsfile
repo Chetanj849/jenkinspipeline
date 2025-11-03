@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // --- Base Paths ---
-        DOCKER_REPO = "getting-started"
+        // --- Repositories ---
+        APP_REPO = "https://github.com/Chetanj849/getting-started.git"
+        APP_BRANCH = "master"
         K8S_PATH = "k8s/overlays/dev"
 
         // --- Azure Details ---
@@ -19,24 +20,32 @@ pipeline {
     }
 
     stages {
+
         // -------------------------------
-        stage('Checkout Source') { 
-            steps { 
-                git(
-                    url: 'https://github.com/Chetanj849/jenkinspipeline.git', 
-                    branch: 'master'
-                ) 
-            } 
+        stage('Checkout Source Repos') {
+            steps {
+                script {
+                    echo "📦 Checking out both repositories..."
+                    dir('app') {
+                        git branch: "${APP_BRANCH}", url: "${APP_REPO}"
+                    }
+                    dir('infra') {
+                        git branch: "master", url: "https://github.com/Chetanj849/jenkinspipeline.git"
+                    }
+                }
+            }
         }
 
         // -------------------------------
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh """
-                        echo "🛠️ Building Docker image..."
-                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                    """
+                dir('app') {
+                    script {
+                        sh """
+                            echo "🛠️ Building Docker image..."
+                            docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        """
+                    }
                 }
             }
         }
@@ -51,7 +60,7 @@ pipeline {
                             az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant ${TENANT_ID}
                             az acr login --name ${ACR_NAME}
 
-                            echo "📤 Pushing Docker image to ACR..."
+                            echo "📤 Pushing Docker image..."
                             docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
                             docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
 
@@ -66,18 +75,20 @@ pipeline {
         // -------------------------------
         stage('Prepare Kustomize') {
             steps {
-                script {
-                    sh '''
-                        echo "🔧 Installing Kustomize..."
-                        curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest \
-                          | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4 | wget -qi -
-                        tar -xzf kustomize_v*_linux_amd64.tar.gz
-                        chmod +x kustomize
+                dir('infra') {
+                    script {
+                        sh '''
+                            echo "🔧 Installing Kustomize..."
+                            curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest \
+                              | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4 | wget -qi -
+                            tar -xzf kustomize_v*_linux_amd64.tar.gz
+                            chmod +x kustomize
 
-                        echo "🔧 Updating image tag in Kustomize overlay..."
-                        cd k8s/overlays/dev
-                        ../../../kustomize edit set image hardkacr.azurecr.io/docker-getting-started:latest
-                    '''
+                            echo "🔧 Updating image in overlay..."
+                            cd k8s/overlays/dev
+                            ../../../kustomize edit set image hardkacr.azurecr.io/docker-getting-started:latest
+                        '''
+                    }
                 }
             }
         }
@@ -86,7 +97,7 @@ pipeline {
         stage('Deploy to AKS') {
             steps {
                 withKubeConfig([credentialsId: 'aks-kubeconfig']) {
-                    script {
+                    dir('infra') {
                         sh """
                             echo "🚀 Deploying to AKS..."
                             kubectl apply -k ${K8S_PATH}
