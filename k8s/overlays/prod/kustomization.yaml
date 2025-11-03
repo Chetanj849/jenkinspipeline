@@ -1,6 +1,10 @@
-bases:
-  - ../../base
-patchesStrategicMerge:
-  - patch.yaml
-namePrefix: prod-
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 
+resources:
+  - ../../base
+
+images:
+  - name: getting-started
+    newName: hardkacr.azurecr.io/docker-getting-started
+    newTag: latest
