@@ -5,10 +5,11 @@ pipeline {
         // --- Repositories ---
         APP_REPO = "https://github.com/Chetanj849/getting-started.git"
         APP_BRANCH = "master"
-        K8S_PATH = "k8s/overlays/dev"
+
+        INFRA_REPO = "https://github.com/Chetanj849/jenkinspipeline.git"
+        K8S_OVERLAY = "infra/k8s/overlays/dev"
 
         // --- Azure Details ---
-        AZURE_CREDENTIALS = credentials('azure-sp')
         TENANT_ID = 'e4e34038-ea1f-4882-b6e8-ccd776459ca0'
         ACR_NAME = 'hardkacr'
         AKS_RG = 'hardik-rg'
@@ -21,108 +22,125 @@ pipeline {
 
     stages {
 
-        // -------------------------------
-        stage('Checkout Source Repos') {
+        // -------------------------------------------------------------------
+        stage('Checkout Source Repositories') {
             steps {
                 script {
-                    echo "📦 Checking out both repositories..."
+                    echo "📦 Checking out repositories..."
                     dir('app') {
                         git branch: "${APP_BRANCH}", url: "${APP_REPO}"
                     }
                     dir('infra') {
-                        git branch: "master", url: "https://github.com/Chetanj849/jenkinspipeline.git"
+                        git branch: "master", url: "${INFRA_REPO}"
                     }
                 }
             }
         }
 
-        // -------------------------------
+        // -------------------------------------------------------------------
         stage('Build Docker Image') {
             steps {
                 dir('app') {
                     script {
-                        sh """
-                            echo "🛠️ Building Docker image..."
-                            docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                        """
-                    }
-                }
-            }
-        }
-
-        // -------------------------------
-        stage('Push Image to Azure Container Registry') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'azure-sp', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
-                    script {
-                        sh """
-                            echo "🔐 Logging into Azure..."
-                            az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant ${TENANT_ID}
-                            az acr login --name ${ACR_NAME}
-
-                            echo "📤 Pushing Docker image..."
-                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
-                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
-
-                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-                        """
-                    }
-                }
-            }
-        }
-
-        // -------------------------------
-        stage('Prepare Kustomize') {
-            steps {
-                dir('infra') {
-                    script {
                         sh '''
-                            echo "🔧 Installing Kustomize..."
-                            curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest \
-                              | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4 | wget -qi -
-                            tar -xzf kustomize_v*_linux_amd64.tar.gz
-                            chmod +x kustomize
-
-                            echo "🔧 Updating image in overlay..."
-                            cd k8s/overlays/dev
-                            ../../../kustomize edit set image hardkacr.azurecr.io/docker-getting-started:latest
+                        echo "🛠️ Building Docker image..."
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                         '''
                     }
                 }
             }
         }
 
-        // -------------------------------
-        
-        
+        // -------------------------------------------------------------------
         stage('Install Tools') {
             steps {
                 sh '''
+                echo "🔧 Installing Azure CLI..."
+                curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
                 echo "🔧 Installing kubectl..."
                 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
                 chmod +x kubectl
-                mv kubectl $HOME/kubectl
-                export PATH=$HOME:$PATH
+                sudo mv kubectl /usr/local/bin/kubectl
+
+                echo "✅ Installed tools (Azure CLI + kubectl):"
+                az --version
+                kubectl version --client
                 '''
             }
         }
-        
-        stage('Deploy to AKS') {
+
+        // -------------------------------------------------------------------
+        stage('Push Image to Azure Container Registry') {
             steps {
-                // If you uploaded kubeconfig as a secret file
-                withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'azure-sp',
+                        usernameVariable: 'AZURE_CLIENT_ID',
+                        passwordVariable: 'AZURE_CLIENT_SECRET'
+                    )
+                ]) {
+
                     sh '''
-                    export KUBECONFIG=$KUBECONFIG_FILE
-                    /var/lib/jenkins/kubectl apply -k k8s/overlays/dev
+                    echo "🔐 Logging into Azure..."
+                    az login --service-principal \
+                        --username "$AZURE_CLIENT_ID" \
+                        --password "$AZURE_CLIENT_SECRET" \
+                        --tenant "'"${TENANT_ID}"'"
+
+                    echo "🔓 Logging into ACR..."
+                    az acr login --name '${ACR_NAME}'
+
+                    echo "📤 Tagging and pushing Docker images..."
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+                    docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+                    docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+
+                    echo "✅ Pushed images to ACR successfully"
                     '''
                 }
-                
-                // Or if kubeconfig is on disk
-                // sh '''
-                // export KUBECONFIG=/path/to/aks-config.yaml
-                // kubectl apply -k k8s/overlays/dev
-                // '''
+            }
+        }
+
+        // -------------------------------------------------------------------
+        stage('Prepare Kustomize Config') {
+            steps {
+                dir('infra') {
+                    script {
+                        sh '''
+                        echo "🔧 Installing Kustomize..."
+                        curl -s https://api.github.com/repos/kubernetes-sigs/kustomize/releases/latest \
+                          | grep browser_download_url \
+                          | grep linux_amd64.tar.gz \
+                          | cut -d '"' -f 4 | wget -qi -
+
+                        tar -xzf kustomize_*_linux_amd64.tar.gz
+                        chmod +x kustomize
+
+                        echo "🖊️ Updating image reference in Kustomize..."
+                        cd k8s/overlays/dev
+                        ../../../kustomize edit set image ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
+                        '''
+                    }
+                }
+            }
+        }
+
+        // -------------------------------------------------------------------
+        stage('Deploy to AKS') {
+            steps {
+                withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                    echo "📡 Deploying to AKS..."
+                    export KUBECONFIG=$KUBECONFIG_FILE
+
+                    kubectl apply -k infra/k8s/overlays/dev
+
+                    echo "✅ Deployment applied successfully!"
+                    '''
+                }
             }
         }
     }
@@ -132,7 +150,7 @@ pipeline {
             echo "✅ Deployment completed successfully!"
         }
         failure {
-            echo "❌ Pipeline failed. Please check logs above."
+            echo "❌ Pipeline failed. Check the logs above."
         }
     }
 }
