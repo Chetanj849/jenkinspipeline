@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: getting-started
-        image: acr849.azurecr.io/docker-getting-started:latest
+        image: acr84.azurecr.io/docker-getting-started:latest
         ports:
         - containerPort: 80
