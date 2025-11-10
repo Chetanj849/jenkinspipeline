@@ -1,13 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: Dev
+  name: getting-started
 spec:
   replicas: 1
   template:
     spec:
       containers:
-        - name: getting-started
+        - name: dev-getting-started
           image: yourdockerhubuser/getting-started:dev
           env:
             - name: ENV
