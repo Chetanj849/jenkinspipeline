@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - name: getting-started
-          image: yourdockerhubuser/getting-started:prod
+          # image: yourdockerhubuser/getting-started:prod
           env:
             - name: ENV
               value: "production"
