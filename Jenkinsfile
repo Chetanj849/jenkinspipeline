@@ -5,7 +5,6 @@ pipeline {
         // --- Repositories ---
         APP_REPO = "https://github.com/Chetanj849/getting-started.git"
         APP_BRANCH = "master"
-        K8S_PATH = "k8s/overlays/dev"
  
         // --- Azure Details ---
         AZURE_CREDENTIALS = credentials('azure-sp')
@@ -25,7 +24,7 @@ pipeline {
         stage('Checkout Source Repos') {
             steps {
                 script {
-                    echo "📦 Checking out both repositories..."
+                    echo "📦 Checking out repositories..."
                     dir('app') {
                         git branch: "${APP_BRANCH}", url: "${APP_REPO}"
                     }
@@ -51,7 +50,7 @@ pipeline {
         }
  
         // -------------------------------
-        stage('Push Image to Azure Container Registry') {
+        stage('Push Image to ACR') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'azure-sp', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
                     script {
@@ -83,10 +82,6 @@ pipeline {
                               | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4 | wget -qi -
                             tar -xzf kustomize_v*_linux_amd64.tar.gz
                             chmod +x kustomize
- 
-                            echo "🔧 Updating image in overlay..."
-                            cd k8s/overlays/dev
-                            ../../../kustomize edit set image hardkacr.azurecr.io/docker-getting-started:latest
                         '''
                     }
                 }
@@ -94,42 +89,71 @@ pipeline {
         }
  
         // -------------------------------
+        stage('Update Dev & Prod Image') {
+            steps {
+                dir('infra') {
+                    script {
+                        sh """
+                            echo "🔧 Updating DEV overlay..."
+                            cd k8s/overlays/dev
+                            ../../../kustomize edit set image ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
 
-        stage('Install Tools') {
+                            echo "🔧 Updating PROD overlay..."
+                            cd ../prod
+                            ../../../kustomize edit set image ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
+                        """
+                    }
+                }
+            }
+        }
+ 
+        // -------------------------------
+        stage('Install kubectl') {
             steps {
                 sh '''
                 echo "🔧 Installing kubectl..."
                 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
                 chmod +x kubectl
-                mv kubectl $HOME/kubectl
-                export PATH=$HOME:$PATH
+                mv kubectl /var/lib/jenkins/kubectl
                 '''
             }
         }
-        stage('Deploy to AKS') {
+ 
+        // -------------------------------
+        stage('Deploy to DEV') {
             steps {
-                // If you uploaded kubeconfig as a secret file
                 withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
                     sh '''
                     export KUBECONFIG=$KUBECONFIG_FILE
-                    /var/lib/jenkins/kubectl apply -k k8s/overlays/dev
+                    /var/lib/jenkins/kubectl apply -k infra/k8s/overlays/dev
                     '''
                 }
-                // Or if kubeconfig is on disk
-                // sh '''
-                // export KUBECONFIG=/path/to/aks-config.yaml
-                // kubectl apply -k k8s/overlays/dev
-                // '''
+            }
+        }
+
+        // -------------------------------
+        stage('Deploy to PROD') {
+            when {
+                branch 'master'
+            }
+            steps {
+                input message: "Proceed with PROD deployment?", ok: "Deploy"
+                withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
+                    sh '''
+                    export KUBECONFIG=$KUBECONFIG_FILE
+                    /var/lib/jenkins/kubectl apply -k infra/k8s/overlays/prod
+                    '''
+                }
             }
         }
     }
  
     post {
         success {
-            echo "✅ Deployment completed successfully!"
+            echo "✅ Dev & Prod Deployment Completed Successfully!"
         }
         failure {
-            echo "❌ Pipeline failed. Please check logs above."
+            echo "❌ Pipeline Failed. Check logs."
         }
     }
 }
