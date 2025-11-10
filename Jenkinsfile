@@ -41,19 +41,18 @@ pipeline {
         }
 
         // -------------------------------
-          stage('Push Image to Azure Container Registry') {
+        stage('Push Image to Azure Container Registry') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'azure-sp', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
                     script {
                         sh """
-                            az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant e4e34038-ea1f-4882-b6e8-ccd776459ca0
-                            az acr login --name ${ACR_NAME}
+                            az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant ${TENANT_ID}
+                            az account set --subscription ced02871-aa05-4c63-8bf2-9cf01ce6db2d
         
+                            az acr login --name ${ACR_NAME}
+                
                             docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
                             docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}
-        
-                            docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
-                            docker push ${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest
                         """
                     }
                 }
