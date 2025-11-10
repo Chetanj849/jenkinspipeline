@@ -10,8 +10,8 @@ pipeline {
         // --- Azure Details ---
         AZURE_CREDENTIALS = credentials('azure-sp')
         TENANT_ID = 'e4e34038-ea1f-4882-b6e8-ccd776459ca0'
-        ACR_NAME = 'hardkacr'
-        AKS_RG = 'hardik-rg'
+        ACR_NAME = 'acr849'
+        AKS_RG = 'Chetan-RG'
         AKS_NAME = 'aks-1'
 
         // --- Image Info ---
