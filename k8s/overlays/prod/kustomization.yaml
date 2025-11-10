@@ -9,5 +9,5 @@ patchesStrategicMerge:
 
 images:
   - name: getting-started
-    newName: acr849.azurecr.io/docker-getting-started
+    newName: acr84.azurecr.io/docker-getting-started
     newTag: latest
