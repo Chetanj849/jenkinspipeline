@@ -14,6 +14,8 @@ spec:
       labels:
         app: getting-started
     spec:
+      imagePullSecrets:                # <--- Add this
+        - name: imagepull              # <--- Your secret name from kubectl create secret
       containers:
       - name: getting-started
         image: acr84.azurecr.io/docker-getting-started:latest
