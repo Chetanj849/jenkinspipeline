@@ -133,9 +133,9 @@ pipeline {
 
         // -------------------------------
         stage('Deploy to PROD') {
-            when {
-                branch 'master'
-            }
+            // when {
+            //     branch 'master'
+            // }
             steps {
                 input message: "Proceed with PROD deployment?", ok: "Deploy"
                 withCredentials([file(credentialsId: 'aks-kubeconfig-file', variable: 'KUBECONFIG_FILE')]) {
